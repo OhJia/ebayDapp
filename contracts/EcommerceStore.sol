@@ -130,7 +130,7 @@ contract EcommerceStore {
   } 
 
   function finalizeAuction(uint _productId) public {
-    Product memory product = stores[productIdInStore[_productId]][_productId];
+    Product storage product = stores[productIdInStore[_productId]][_productId];
     require (now > product.auctionEndTime);
     require (product.status == ProductStatus.Open);
     require (product.highestBidder != msg.sender);

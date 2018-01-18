@@ -96,7 +96,7 @@ window.App = {
       let secretText = $('#reveal-secret-text').val();
       let productId = $('#product-id').val();
       EcommerceStore.deployed().then((i) => {
-        i.revealBid(parseInt(productId), web3.toWei(amount).toString(), secretText, { from: web3.eth.accounts[1], gas: 440000 })
+        i.revealBid(parseInt(productId), web3.toWei(amount).toString(), secretText, { from: web3.eth.accounts[0], gas: 440000 })
         .then((f) => {
           $('#msg').show();
           $('#msg').html('Your bid has been successfully revealed!');
@@ -111,7 +111,7 @@ window.App = {
       let productId = $('#product-id').val();
       
       EcommerceStore.deployed().then((i) => {
-        i.finalizeAuction(parseInt(productId), {from: web3.eth.accounts[2], gas: 4400000})
+        i.finalizeAuction(parseInt(productId), {from: web3.eth.accounts[0], gas: 4400000})
           .then((f) => {
             $('#msg').show();
             $('#msg').html('The auction has been finalized and winner declared.');
@@ -166,9 +166,12 @@ window.App = {
 
 function renderStore () {
   EcommerceStore.deployed().then((i) => {
+
     let index = 0;
+
     i.productIndex.call().then((n) => {
-      index = n;
+      index = parseInt(n);
+      console.log('index: ', index);
       $('#total-products').html(index.toString());
 
       for (let y = 0; y < index; y++) {
@@ -185,6 +188,8 @@ function renderStore () {
           })
         });
       }
+    }).catch((err) => {
+      console.log(err);
     });
   })
 }

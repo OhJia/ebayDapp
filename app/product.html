@@ -65,24 +65,26 @@
 
             <form id="finalize-auction" class="col-sm-6">
               <input type="hidden" name="product-id" id="product-id" />
-              <button type="submit" class="btn form-submit">Finalize Auction
+              <button type="submit" class="btn btn-primary form-submit">Finalize Auction</button>
             </form>
           </div>
 
           <div id="product-desc" class="col-sm-12">
             <h2>Product Description</h2>
+            <div id="product-status"></div>
           </div>
 
-          <div id="product-status"></div>
           <div id="escrow-info">
+            <h2>Escrow Info</h2>
             <div id="buyer"></div>
             <div id="seller"></div>
             <div id="arbiter"></div>
             <div id="release-count"></div>
             <div id="refund-count"></div>
+            <a id="release-funds" class="btn btn-primary form-submit">Release Amount to Seller</a>
+            <a id="refund-funds" class="btn btn-primary form-submit">Refund Amount to Buyer</a>
           </div>
-          <a id="release-funds" class="btn form-submit">Release Amount to Seller</a>
-          <a id="refund-funds" class="btn form-submit">Refund Amount to Buyer</a>
+          
 
 
         </div>
