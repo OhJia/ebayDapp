@@ -11,6 +11,8 @@ contract EcommerceStore {
   mapping (uint => address) productIdInStore;
   mapping (uint => address) productEscrow;
 
+  event NewProduct(uint _productId, string _name, string _category, string _imageLink, string _descLink, uint _auctionStartTime, uint _auctionEndTime, uint _startPrice, uint _productCondition);
+
   struct Bid {
     address bidder;
     uint productId;
@@ -49,6 +51,8 @@ contract EcommerceStore {
 
     stores[msg.sender][productIndex] = product;
     productIdInStore[productIndex] = msg.sender;
+
+    NewProduct(productIndex, _name, _category, _imageLink, _descLink, _auctionStartTime, _auctionEndTime, _startPrice, _productCondition);
   }
 
   function getProductInfo(uint _productIndex) view public returns (uint, string, string, string, string, uint, uint) {
