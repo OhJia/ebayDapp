@@ -27,6 +27,62 @@ app.listen(3000, function() {
   console.log('Ebay Ethereum server listening on port 3000!');
 });
 
+app.get('/products', function (req, res) {
+  let currentTime = Math.round(new Date() / 1000);
+  let query = { productStatus: { $eq: 0 } }
+
+  if (Object.keys(req.query).length === 0) {
+    query['auctionEndTime'] = { $gt: currentTime }
+  } else if (req.query.category !== undefined) {
+    query['auctionEndTime'] = { $lt: currentTime }
+    query['category'] = { $eq: req.query.category }
+  } else if (req.query.productStatus !== undefined) {
+    if (req.query.productStatus === "reveal") {
+      query['auctionEndTime'] = { $lt: currentTime, $gt: currentTime - (60 * 60) }
+    } else if (req.query.productStatus === "finalize") {
+      query['auctionEndTime'] = { $lt: currentTime - (60 * 60) }
+      query['productStatus'] = { $eq: 0 }
+    }
+  }
+
+  ProductModel.find(query, null, { sort: 'auctionEndTime' }, function (err, items) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+    console.log(items.length);
+    res.send(items);
+  })
+});
+
+app.get('/product', function (req, res) {
+  let currentTime = Math.round(new Date() / 1000);
+  let query = { blockchainId: { $eq: req.query.id } }
+
+  // if (Object.keys(req.query).length === 0) {
+  //   query['auctionEndTime'] = { $gt: currentTime }
+  // } else if (req.query.category !== undefined) {
+  //   query['auctionEndTime'] = { $lt: currentTime }
+  //   query['category'] = { $eq: req.query.category }
+  // } else if (req.query.productStatus !== undefined) {
+  //   if (req.query.productStatus === "reveal") {
+  //     query['auctionEndTime'] = { $lt: currentTime, $gt: currentTime - (60 * 60) }
+  //   } else if (req.query.productStatus === "finalize") {
+  //     query['auctionEndTime'] = { $lt: currentTime - (60 * 60) }
+  //     query['productStatus'] = { $eq: 0 }
+  //   }
+  // }
+
+  ProductModel.findOne(query, null, function (err, items) {
+    if (err) {
+      console.log(err);
+      return;
+    }
+    console.log(items.length);
+    res.send(items);
+  })
+});
+
 function setupProductEventListner () {
   let productEvent;
   EcommerceStore.deployed().then(function (i) {

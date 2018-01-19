@@ -17,6 +17,12 @@ const ethUtil = require('ethereumjs-util');
 // TODO: why http, not https?
 const ipfs = ipfsAPI({ host: 'localhost', port: '5001', protocol: 'http' });
 
+const offchainServer = "http://localhost:3000"; // this connects to the server, which serves from db
+const categories = ["Art", "Books", "Cameras", "Cell Phones & Accessories",
+                    "Clothing", "Computers & Tablets", "Gift Cards & Coupons",
+                    "Musical Instruments & Gear", "Pet Supplies", "Pottery & Glass",
+                    "Sporting Goods", "Tickets", "Toys & Hobbies", "Video Games"];
+
 window.App = {
   start: () => {
     EcommerceStore.setProvider(web3.currentProvider);
@@ -161,52 +167,103 @@ window.App = {
 
 /***************************************************
   RENDER STORE ON LOAD
-
+  (from off chain server)
 ****************************************************/
 
 function renderStore () {
-  EcommerceStore.deployed().then((i) => {
-
-    let index = 0;
-
-    i.productIndex.call().then((n) => {
-      index = parseInt(n);
-      console.log('index: ', index);
-      $('#total-products').html(index.toString());
-
-      for (let y = 0; y < index; y++) {
-        i.getProductInfo.call(y).then((pi) => {
-          let product = pi;
-          // product.push(pi);
-          i.getProductAuctionInfo.call(y).then((pa) => {
-            for (var x = 0; x < pa.length; x++) {
-              product.push(pa[x]);
-            }
-            
-            console.log('product list: ', product);
-            $('#product-list').append(buildProduct(product));
-          })
-        });
-      }
-    }).catch((err) => {
-      console.log(err);
-    });
+  renderProducts("product-list", {});
+  renderProducts("product-reveal-list", { productStatus: "reveal" });
+  renderProducts("product-finalize-list", { productStatus: "finalize" });
+  categories.forEach((value) => {
+    $("#categories").append("<div>" + value + "");
   })
 }
 
-function buildProduct(product) {
-  const [id, name, category, imageLink, descLink,
-        auctionStartTime, auctionEndTime, startPrice] = product;
+function renderProducts (div, filters) {
+  $.ajax({
+    url: offchainServer + "/products",
+    type: 'get',
+    contentType: "application/json; charset=utf-8",
+    data: filters // which goes here
+  }).done((data) => {
+    if (data.length === 0) {
+      $("#" + div).html('No products found');
+    } else {
+      $("#" + div).html('');
+    }
+    while (data.length > 0) {
+      let chunks = data.splice(0, 4);
+      let row = $("<div/>");
+      row.addClass("row");
+      chunks.forEach((value) => {
+        let node = buildProduct(value);
+        row.append(node);
+      })
+      $("#" + div).append(row);
+    }
+  })
+}
+
+function buildProduct (product) {
+  console.log(product);
   let node = $(`<div/>`);
   node.addClass(`col-sm-3 text-center col-margin-bottom-1`);
-  node.append(`<img src='https://ipfs.io/ipfs/${imageLink}' width='150px' />`);
-  node.append(`<div>${name}</div>`);
-  node.append(`<div>${category}</div>`);
-  node.append(`<div>Auction start time: ${auctionStartTime}</div>`);
-  node.append(`<div>Auction end time: ${auctionEndTime}</div>`);
-  node.append(`<div>Ether: ${startPrice}</div>`);
+  node.append(`<img src='https://ipfs.io/ipfs/${product.ipfsImageHash}' width='150px' />`);
+  node.append(`<div>${product.name}</div>`);
+  node.append(`<div>${product.category}</div>`);
+  node.append(`<div>Auction start time: ${product.auctionStartTime}</div>`);
+  node.append(`<div>Auction end time: ${product.auctionEndTime}</div>`);
+  node.append(`<div>Ether: ${product.price}</div>`);
   return node;
 }
+
+/***************************************************
+  RENDER STORE ON LOAD
+  (from blockchain)
+****************************************************/
+
+// function renderStore () {
+//   EcommerceStore.deployed().then((i) => {
+
+//     let index = 0;
+
+//     i.productIndex.call().then((n) => {
+//       index = parseInt(n);
+//       console.log('index: ', index);
+//       $('#total-products').html(index.toString());
+
+//       for (let y = 0; y < index; y++) {
+//         i.getProductInfo.call(y).then((pi) => {
+//           let product = pi;
+//           // product.push(pi);
+//           i.getProductAuctionInfo.call(y).then((pa) => {
+//             for (var x = 0; x < pa.length; x++) {
+//               product.push(pa[x]);
+//             }
+//             console.log('product list: ', product);
+//             $('#product-list').append(buildProduct(product));
+//           })
+//         });
+//       }
+//     }).catch((err) => {
+//       console.log(err);
+//     });
+//   })
+// }
+
+// function buildProduct (product) {
+//   const [id, name, category, imageLink, descLink,
+//         auctionStartTime, auctionEndTime, startPrice] = product;
+//   let node = $(`<div/>`);
+//   node.addClass(`col-sm-3 text-center col-margin-bottom-1`);
+//   node.append(`<img src='https://ipfs.io/ipfs/${imageLink}' width='150px' />`);
+//   node.append(`<div>${name}</div>`);
+//   node.append(`<div>${category}</div>`);
+//   node.append(`<div>Auction start time: ${auctionStartTime}</div>`);
+//   node.append(`<div>Auction end time: ${auctionEndTime}</div>`);
+//   node.append(`<div>Ether: ${startPrice}</div>`);
+//   return node;
+// }
 
 /***************************************************
   SAVE PRODUCT TO BLOCKCHAIN
@@ -282,86 +339,108 @@ function saveTextBlobOnIpfs (blob) {
 
 /***************************************************
   RENDER PRODUCT DETAILS
-
+  (query db)
+  TODO: build product details
 ****************************************************/
 
 function renderProductDetails (productId) {
-  EcommerceStore.deployed().then((i) => {
-    i.getProductInfo.call(productId).then((pi) => {
-      // console.log(pi);
-      var p = pi;
-
-      i.getProductAuctionInfo.call(productId).then((pa) => {
-        for (let x = 0; x < pa.length; x++) {
-          p.push(pa[x]);
-        }
-
-        let content = '';
-        const [id, name, category, imageLink, descLink,
-              auctionStartTime, auctionEndTime, startPrice,
-              highestBidder, highestBid, secondHighestBid,
-              totalBids, status] = p;
-
-        console.log('image hash', imageLink);
-        console.log('total bids', parseInt(totalBids));
-
-        ipfs.cat(descLink).then((stream) => {
-          stream.on('data', (chunk) => {
-            // do stuff with this chunk of data
-            content += chunk.toString();
-            $('#product-desc').append(`<div>${content}</div>`);
-          })
-        });
-
-        $('#product-image').append(`<img src='https://ipfs.io/ipfs/${imageLink}' width='250px' />`);
-        $('#product-price').html(displayPrice(startPrice));
-        $('#bid-total').html(parseInt(totalBids));
-        $('#product-name').html(name);
-        $('#product-auction-end').html(displayEndHours(auctionEndTime));
-        $('#product-id').val(id);
-        $('#revealing, #bidding').hide();
-        let currentTime = getCurrentTimeInSeconds();
-
-        if (parseInt(status) === 1) {
-          // $('#product-status').html('Product sold.');
-          EcommerceStore.deployed().then((i) => {
-            $('#escrow-info').show();
-            i.highestBidderInfo.call(productId).then((f) => {
-              const [highestBidder, highestBid, secondHighestBid] = f;
-              if (secondHighestBid.toLocaleString() === '0') {
-                $('#product-status').html('Auction has ended. No bids were revealed');
-              } else {
-              $('#product-status').html(`Auction has ended. Product sold to ${highestBidder} for ${displayPrice(secondHighestBid)}
-              The money is in the escrow. Two of the three participants (Buyer, Seller and Arbiter) have to 
-              either release the funds to seller or refund the money to the buyer`);
-              }
-            })
-            i.escrowInfo.call(productId).then((f) => {
-              const [buyer, seller, arbiter, amount, fundsDisbursed, releaseCount, refundCount] = f;
-              $('#buyer').html(`Buyer: ${buyer}`);
-              $('#seller').html(`Seller: ${seller}`);
-              $('#arbiter').html(`Arbiter: ${arbiter}`);
-              if(fundsDisbursed) {
-                $('#release-count').html('Amount from the escrow has been released.');
-              } else {
-                $('#release-count').html(`${releaseCount} of 3 participants have agreed to release funds.`);
-                $('#refund-count').html(`${refundCount} of 3 participants have agreed to refund the buyer.`);
-              }
-            })
-          })
-        } else if (parseInt(status) === 2) {
-          $('#product-status').html('Product was not sold.');
-        } else if (currentTime < auctionEndTime) {
-          $('#bidding').show();
-        } else if (currentTime < auctionEndTime + 600) {
-          $('#revealing').show();
-        } else {
-          $('#finalize-auction').show();
-        }
-      })
-    })
+  $.ajax({
+    url: offchainServer + "/product",
+    type: 'get',
+    contentType: "application/json; charset=utf-8",
+    data: { id: productId } // which goes here
+  }).done((data) => {
+    if (data.length === 0) {
+      console.log("not found");
+    } else {
+      console.log("found!");
+      console.log(data);
+    }
   })
 }
+
+/***************************************************
+  RENDER PRODUCT DETAILS
+  (query blockchain)
+****************************************************/
+
+// function renderProductDetails (productId) {
+//   EcommerceStore.deployed().then((i) => {
+//     i.getProductInfo.call(productId).then((pi) => {
+//       // console.log(pi);
+//       var p = pi;
+
+//       i.getProductAuctionInfo.call(productId).then((pa) => {
+//         for (let x = 0; x < pa.length; x++) {
+//           p.push(pa[x]);
+//         }
+
+//         let content = '';
+//         const [id, name, category, imageLink, descLink,
+//               auctionStartTime, auctionEndTime, startPrice,
+//               highestBidder, highestBid, secondHighestBid,
+//               totalBids, status] = p;
+
+//         console.log('image hash', imageLink);
+//         console.log('total bids', parseInt(totalBids));
+
+//         ipfs.cat(descLink).then((stream) => {
+//           stream.on('data', (chunk) => {
+//             // do stuff with this chunk of data
+//             content += chunk.toString();
+//             $('#product-desc').append(`<div>${content}</div>`);
+//           })
+//         });
+
+//         $('#product-image').append(`<img src='https://ipfs.io/ipfs/${imageLink}' width='250px' />`);
+//         $('#product-price').html(displayPrice(startPrice));
+//         $('#bid-total').html(parseInt(totalBids));
+//         $('#product-name').html(name);
+//         $('#product-auction-end').html(displayEndHours(auctionEndTime));
+//         $('#product-id').val(id);
+//         $('#revealing, #bidding').hide();
+//         let currentTime = getCurrentTimeInSeconds();
+
+//         if (parseInt(status) === 1) {
+//           // $('#product-status').html('Product sold.');
+//           EcommerceStore.deployed().then((i) => {
+//             $('#escrow-info').show();
+//             i.highestBidderInfo.call(productId).then((f) => {
+//               const [highestBidder, highestBid, secondHighestBid] = f;
+//               if (secondHighestBid.toLocaleString() === '0') {
+//                 $('#product-status').html('Auction has ended. No bids were revealed');
+//               } else {
+//               $('#product-status').html(`Auction has ended. Product sold to ${highestBidder} for ${displayPrice(secondHighestBid)}
+//               The money is in the escrow. Two of the three participants (Buyer, Seller and Arbiter) have to 
+//               either release the funds to seller or refund the money to the buyer`);
+//               }
+//             })
+//             i.escrowInfo.call(productId).then((f) => {
+//               const [buyer, seller, arbiter, amount, fundsDisbursed, releaseCount, refundCount] = f;
+//               $('#buyer').html(`Buyer: ${buyer}`);
+//               $('#seller').html(`Seller: ${seller}`);
+//               $('#arbiter').html(`Arbiter: ${arbiter}`);
+//               if(fundsDisbursed) {
+//                 $('#release-count').html('Amount from the escrow has been released.');
+//               } else {
+//                 $('#release-count').html(`${releaseCount} of 3 participants have agreed to release funds.`);
+//                 $('#refund-count').html(`${refundCount} of 3 participants have agreed to refund the buyer.`);
+//               }
+//             })
+//           })
+//         } else if (parseInt(status) === 2) {
+//           $('#product-status').html('Product was not sold.');
+//         } else if (currentTime < auctionEndTime) {
+//           $('#bidding').show();
+//         } else if (currentTime < auctionEndTime + 600) {
+//           $('#revealing').show();
+//         } else {
+//           $('#finalize-auction').show();
+//         }
+//       })
+//     })
+//   })
+// }
 
 function getCurrentTimeInSeconds () {
  return Math.round(new Date() / 1000);
