@@ -14,8 +14,10 @@ var EcommerceStore = contract(ecommerceStoreArtifacts);
 const ipfsAPI = require('ipfs-api');
 const ethUtil = require('ethereumjs-util');
 
-// TODO: why http, not https?
-const ipfs = ipfsAPI({ host: 'localhost', port: '5001', protocol: 'http' });
+// hosting ipfs node locally
+// const ipfs = ipfsAPI({ host: 'localhost', port: '5001', protocol: 'http' });
+// using infura
+const ipfs = ipfsAPI({host: 'ipfs.infura.io', port: '5001', protocol: 'http'});
 
 const offchainServer = "http://localhost:3000"; // this connects to the server, which serves from db
 const categories = ["Art", "Books", "Cameras", "Cell Phones & Accessories",
@@ -491,7 +493,8 @@ window.addEventListener('load', () => {
   } else {
     console.warn(`No web3 detected. Falling back to http://localhost:8545. You should remove this fallback when you deploy live, as it's inherently insecure. Consider switching to Metamask for development. More info here: http://truffleframework.com/tutorials/truffle-and-metamask`);
     // fallback - use your fallback strategy (local node / hosted node + in-dapp id mgmt / fail)
-    window.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+    //window.web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
+    window.web3 = new Web3(new Web3.providers.HttpProvider("https://ropsten.infura.io/jhjrbwmschPDuoq0On2g"));
   }
 
   App.start();
